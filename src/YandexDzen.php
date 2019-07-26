@@ -12,7 +12,7 @@ class YandexDzen
     const URL_PAGE = 'https://zen.yandex.ru/profile/editor/';
     const URL_NEXT_PAGE = 'https://zen.yandex.ru/media-api/get-publications-by-state?state=published&pageSize=200&publicationIdAfter={lastPublicationId}';
     const URL_FIRST_PUBLICATIONS = 'https://zen.yandex.ru/media-api/get-publications-by-state?state=published&pageSize=200';
-    const URL_COUNTED_PUBLICATIONS = 'https://zen.yandex.ru/media-api/count-grouped-publications-by-type';
+    const URL_COUNTED_PUBLICATIONS = 'https://zen.yandex.ru/media-api/count-publications-by-state?state=published';
 
     private $client;
 
@@ -51,7 +51,7 @@ class YandexDzen
 
         $this->client->setToken(trim($doc->first('#csrfToken')->text()));
 
-        $this->publicationsCount = $this->getCountedPublicationsByType();
+        $this->publicationsCount = $this->getCountedPublicationsByState();
         $this->favouritesCount = $initData['userPublisher']['favouritesCount'];
         $this->publisherId = $initData['userPublisher']['id'];
         $this->collectionPublications = new CollectionPublications();
@@ -162,16 +162,16 @@ class YandexDzen
      * @throws GuzzleException
      * @throws Exception
      */
-    private function getCountedPublicationsByType()
+    private function getCountedPublicationsByState()
     {
         $html = $this->client->get(self::URL_COUNTED_PUBLICATIONS);
 
         $ar = json_decode($html, true);
-        if (empty($ar['countedPublicationsByType'])) {
+        if (!isset($ar['count'])) {
             throw new Exception('Ошибочные данные: ' . $html);
         }
 
-        return $ar['countedPublicationsByType']['article'];
+        return $ar['count'];
     }
 
     private function addPublications($publications)
