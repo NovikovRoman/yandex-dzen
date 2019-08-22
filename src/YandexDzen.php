@@ -10,9 +10,9 @@ use YandexDzen\Client as YandexDzenClient;
 class YandexDzen
 {
     const URL_PAGE = 'https://zen.yandex.ru/profile/editor/';
-    const URL_NEXT_PAGE = 'https://zen.yandex.ru/media-api/get-publications-by-state?state=published&pageSize=200&publicationIdAfter={lastPublicationId}';
-    const URL_FIRST_PUBLICATIONS = 'https://zen.yandex.ru/media-api/get-publications-by-state?state=published&pageSize=200';
-    const URL_COUNTED_PUBLICATIONS = 'https://zen.yandex.ru/media-api/count-publications-by-state?state=published';
+    const URL_NEXT_PAGE = 'https://zen.yandex.ru/media-api/get-publications-by-state?state=published&publisherId={publisherId}&pageSize=200&publicationIdAfter={lastPublicationId}';
+    const URL_FIRST_PUBLICATIONS = 'https://zen.yandex.ru/media-api/get-publications-by-state?state=published&publisherId={publisherId}&pageSize=200';
+    const URL_COUNTED_PUBLICATIONS = 'https://zen.yandex.ru/media-api/count-publications-by-state?state=published&publisherId={publisherId}';
 
     private $client;
 
@@ -50,10 +50,10 @@ class YandexDzen
         }
 
         $this->client->setToken(trim($doc->first('#csrfToken')->text()));
-
-        $this->publicationsCount = $this->getCountedPublicationsByState();
         $this->favouritesCount = $initData['userPublisher']['favouritesCount'];
         $this->publisherId = $initData['userPublisher']['id'];
+
+        $this->publicationsCount = $this->getCountedPublicationsByState();
         $this->collectionPublications = new CollectionPublications();
         $this->addPublications($this->getPublications());
 
@@ -86,7 +86,11 @@ class YandexDzen
             return false;
         }
 
-        $url = self::URL_NEXT_PAGE;
+        $url = str_replace(
+            '{publisherId}',
+            $this->getPublisherId(),
+            self::URL_NEXT_PAGE
+        );
         /** @var Publication $publication */
         $publication = $this->collectionPublications->getLastPublication();
         if (!$publication) { // такой ситауции не должно быть в принципе
@@ -147,7 +151,12 @@ class YandexDzen
      */
     private function getPublications()
     {
-        $html = $this->client->get(self::URL_FIRST_PUBLICATIONS);
+        $url = str_replace(
+            '{publisherId}',
+            $this->getPublisherId(),
+            self::URL_FIRST_PUBLICATIONS
+        );
+        $html = $this->client->get($url);
 
         $ar = json_decode($html, true);
         if (empty($ar['publications'])) {
@@ -164,7 +173,12 @@ class YandexDzen
      */
     private function getCountedPublicationsByState()
     {
-        $html = $this->client->get(self::URL_COUNTED_PUBLICATIONS);
+        $url = str_replace(
+            '{publisherId}',
+            $this->getPublisherId(),
+            self::URL_COUNTED_PUBLICATIONS
+        );
+        $html = $this->client->get($url);
 
         $ar = json_decode($html, true);
         if (!isset($ar['count'])) {
