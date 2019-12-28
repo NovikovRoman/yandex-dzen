@@ -32,24 +32,34 @@ class YandexDzen
     public function __construct($profile, YandexDzenClient $client)
     {
         $this->client = $client;
-
         $html = $this->client->get(self::URL_PAGE . $profile);
-        $doc = new Document($html);
 
-        if (!$doc->has('#init_data')) {
-            $e = new YandexDzenException('Не получилось получить первую страницу.');
-            $e->setHtml($html);
-            throw $e;
-        }
-
-        $initData = json_decode(trim($doc->first('#init_data')->innerHtml()), true);
-        if (empty($initData['userPublisher'])) {
+        preg_match('/window\._data\s*=\s*JSON\.parse\("(.+?)"\);/sui', $html, $m);
+        if (empty($m[1])) {
             $e = new YandexDzenException('Не удалось получить данные для инициализации.');
-            $e->setHtml('<pre>' . print_r($initData, true) . '</pre>');
+            $e->setHtml('<pre>' . print_r($html, true) . '</pre>');
             throw $e;
         }
 
-        $this->client->setToken(trim($doc->first('#csrfToken')->text()));
+        $m[1] = preg_replace('/\\\\"/s', '"', $m[1]);
+        $m[1] = preg_replace('/\\\\"/s', '"', $m[1]);
+        $m[1] = preg_replace('/\\\\u/s', 'u', $m[1]);
+        $m[1] = html_entity_decode($m[1]);
+
+        $initData = json_decode($m[1], true);
+        if (empty($initData)) {
+            $e = new YandexDzenException('Не удалось распарсить данные для инициализации.');
+            $e->setHtml('<pre>' . print_r($m[1], true) . '</pre>');
+            throw $e;
+        }
+
+        preg_match('/window\._csrfToken\s*=\s*(\'|")([0-9a-f:]+)\1/sui', $html, $m);
+        if (empty($m[2])) {
+            $e = new YandexDzenException('Не удалось получить csrf-токен.');
+            throw $e;
+        }
+
+        $this->client->setToken($m[2]);
         $this->favouritesCount = $initData['userPublisher']['favouritesCount'];
         $this->publisherId = $initData['userPublisher']['id'];
 
