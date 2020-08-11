@@ -24,10 +24,10 @@ class Publication
         $this->title = $data['content']['preview']['title'];
         $this->id = $data['id'];
         $this->itemId = $data['itemId'];
-        $this->addTime = empty($data['addTime']) ? null : (new DateTime())->setTimestamp($data['addTime']);
+        $this->addTime = empty($data['addTime']) ? null : (new DateTime())->setTimestamp(intval($data['addTime']) / 1000);
         $this->snippet = $data['content']['preview']['snippet'];
         $this->type = $data['content']['type'];
-        $this->modTime = (new DateTime())->setTimestamp($data['content']['modTime']);
+        $this->modTime = (new DateTime())->setTimestamp(intval($data['content']['modTime'] / 1000));
         $this->hasChanges = $data['privateData']['hasChanges'];
         $this->hasPublished = $data['privateData']['hasPublished'];
         $this->snippetFrozen = $data['privateData']['snippetFrozen'];

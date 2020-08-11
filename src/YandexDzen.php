@@ -2,7 +2,6 @@
 
 namespace YandexDzen;
 
-use DiDom\Document;
 use \GuzzleHttp\Exception\GuzzleException;
 use \Exception;
 use YandexDzen\Client as YandexDzenClient;
@@ -53,7 +52,7 @@ class YandexDzen
             throw $e;
         }
 
-        preg_match('/window\._csrfToken\s*=\s*(\'|")([0-9a-f:]+)\1/sui', $html, $m);
+        preg_match('/window\._csrfToken\s*=\s*([\'"])([0-9a-f:]+)\1/sui', $html, $m);
         if (empty($m[2])) {
             $e = new YandexDzenException('Не удалось получить csrf-токен.');
             throw $e;
@@ -92,7 +91,8 @@ class YandexDzen
      */
     public function getNextPage()
     {
-        if ($this->collectionPublications->count() >= $this->publicationsCount) {
+        // yandex иногда криво считает общее кол-во статей
+        if ($this->collectionPublications->count() >= $this->publicationsCount || $this->collectionPublications->count() >= $this->publicationsCount - 1) {
             return false;
         }
 
@@ -103,7 +103,7 @@ class YandexDzen
         );
         /** @var Publication $publication */
         $publication = $this->collectionPublications->getLastPublication();
-        if (!$publication) { // такой ситауции не должно быть в принципе
+        if (!$publication) { // такой ситуации не должно быть в принципе
             throw new Exception('Пустая коллекция');
         }
 

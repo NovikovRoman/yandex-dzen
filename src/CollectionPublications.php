@@ -37,9 +37,7 @@ class CollectionPublications
         if (empty($this->sort)) {
             return null;
         }
-        $lastId = array_pop($this->sort);
-        array_push($this->sort, $lastId);
-        return $this->collection[$lastId];
+        return $this->collection[$this->sort[count($this->sort) - 1]];
     }
 
     public function numberShows()
@@ -47,7 +45,6 @@ class CollectionPublications
         $num = 0;
         /** @var Publication $publication */
         foreach ($this->collection as $publication) {
-            /** @var StatisticPublication $statistics */
             $statistics = $publication->getStatistics();
             $num += $statistics->getShows();
         }
@@ -59,7 +56,6 @@ class CollectionPublications
         $num = 0;
         /** @var Publication $publication */
         foreach ($this->collection as $publication) {
-            /** @var StatisticPublication $statistics */
             $statistics = $publication->getStatistics();
             $num += $statistics->getFeedShows();
         }
@@ -71,7 +67,6 @@ class CollectionPublications
         $num = 0;
         /** @var Publication $publication */
         foreach ($this->collection as $publication) {
-            /** @var StatisticPublication $statistics */
             $statistics = $publication->getStatistics();
             $num += $statistics->getLikes();
         }
@@ -83,7 +78,6 @@ class CollectionPublications
         $num = 0;
         /** @var Publication $publication */
         foreach ($this->collection as $publication) {
-            /** @var StatisticPublication $statistics */
             $statistics = $publication->getStatistics();
             $num += $statistics->getViews();
         }
@@ -95,7 +89,6 @@ class CollectionPublications
         $num = 0;
         /** @var Publication $publication */
         foreach ($this->collection as $publication) {
-            /** @var StatisticPublication $statistics */
             $statistics = $publication->getStatistics();
             $num += $statistics->getViewsTillEnd();
         }
@@ -107,7 +100,6 @@ class CollectionPublications
         $num = 0;
         /** @var Publication $publication */
         foreach ($this->collection as $publication) {
-            /** @var StatisticPublication $statistics */
             $statistics = $publication->getStatistics();
             if ($statistics->getViewsTillEnd()) {
                 $averageReadingTime = round($statistics->getSumViewTimeSec() / $statistics->getViewsTillEnd());
