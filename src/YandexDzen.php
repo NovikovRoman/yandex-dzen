@@ -32,18 +32,12 @@ class YandexDzen
     {
         $this->client = $client;
         $html = $this->client->get(self::URL_PAGE . $profile);
-
-        preg_match('/window\._data\s*=\s*JSON\.parse\("(.+?)"\);/sui', $html, $m);
+        preg_match('/window\._data\s*=\s*({\s*".+});\s*window\._uatraits/sui', $html, $m);
         if (empty($m[1])) {
             $e = new YandexDzenException('Не удалось получить данные для инициализации.');
             $e->setHtml('<pre>' . print_r($html, true) . '</pre>');
             throw $e;
         }
-
-        $m[1] = preg_replace('/\\\\"/s', '"', $m[1]);
-        $m[1] = preg_replace('/\\\\"/s', '"', $m[1]);
-        $m[1] = preg_replace('/\\\\u/s', 'u', $m[1]);
-        $m[1] = html_entity_decode($m[1]);
 
         $initData = json_decode($m[1], true);
         if (empty($initData)) {
