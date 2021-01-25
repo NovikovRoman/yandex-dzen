@@ -32,7 +32,7 @@ class YandexDzen
     {
         $this->client = $client;
         $html = $this->client->get(self::URL_PAGE . $profile);
-        preg_match('/window\._data\s*=\s*({\s*".+});\s*window\._uatraits/sui', $html, $m);
+        preg_match('/w\._data\s*=\s*({\s*".+});\s*w\._uatraits/sui', $html, $m);
         if (empty($m[1])) {
             $e = new YandexDzenException('Не удалось получить данные для инициализации.');
             $e->setHtml('<pre>' . print_r($html, true) . '</pre>');
@@ -46,7 +46,7 @@ class YandexDzen
             throw $e;
         }
 
-        preg_match('/window\._csrfToken\s*=\s*([\'"])([0-9a-f:]+)\1/sui', $html, $m);
+        preg_match('/w\._csrfToken\s*=\s*([\'"])([0-9a-f:]+)\1/sui', $html, $m);
         if (empty($m[2])) {
             $e = new YandexDzenException('Не удалось получить csrf-токен.');
             throw $e;
