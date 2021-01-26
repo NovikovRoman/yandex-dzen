@@ -3,13 +3,14 @@
 namespace YandexDzen;
 
 use DiDom\Document;
+use DiDom\Exceptions\InvalidSelectorException;
 use GuzzleHttp\Cookie\CookieJar;
 use \GuzzleHttp\Exception\GuzzleException;
 
 class Client
 {
     const USER_AGENT = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.90 Safari/537.36';
-    const URL_AUTH_FORM = 'https://passport.yandex.ru/auth?retpath=https%3A%2F%2Fzen.yandex.ru%2Fmedia%2Fzen%2Flogin';
+    const SEND_LOGIN_URL = 'https://passport.yandex.ru/auth?origin=zen_header_entry&retpath=https%3A%2F%2Fzen.yandex.ru%2F%3Fclid%3D300%26from_page%3Dfeed_header_login';
 
     private $login;
     private $password;
@@ -53,88 +54,105 @@ class Client
      */
     public function auth()
     {
-        $html = $this->get(self::URL_AUTH_FORM);
+        $html = $this->get(self::SEND_LOGIN_URL);
         $doc = new Document($html);
-        if (!$doc->has('.passp-auth')) {
-            $e = new YandexDzenException('Не удалось получить форму авторизации.');
+        try {
+            $form = $doc->first('.passp-auth-content .passp-login-form form');
+            if (!$form) {
+                throw new InvalidSelectorException('');
+            }
+
+        } catch (InvalidSelectorException $e) {
+            $e = new YandexDzenException('Не удалось получить форму для отправки логина.');
             $e->setHtml($html);
             throw $e;
         }
 
-        if (!preg_match('/process_uuid=([a-f0-9\-]+)/sui', $html, $m)) {
+        if (!preg_match('#process_uuid=([a-f0-9\-]+)#sui', $html, $m)) {
             $e = new YandexDzenException('Не удалось получить process_uuid.');
             $e->setHtml($html);
             throw $e;
         }
         $processUUID = $m[1];
-        // получим токен и сделаем запрос с логином
-        $token = $doc->first('.passp-auth input[name=csrf_token]')->attr('value');
-        $this->setToken($token);
-        $resp = $this->sendLogin($token, $processUUID);
 
-        // сделаем запрос с паролем
-        $this->sendPassword($token, $resp['track_id']);
-    }
+        try {
+            $csrfToken = $form->first('input[name=csrf_token]')->attr('value');
+            $retpath = $form->first('input[name=retpath]')->attr('value');
 
-    /**
-     * @param $token
-     * @param $processUUID
-     * @return array
-     * fields:
-     * [
-     *    status string
-     *    csrf_token string
-     *    can_authorize bool
-     *    preferred_auth_method string
-     *    auth_methods    []string
-     *    track_id string
-     *    id string
-     * ]
-     * @throws GuzzleException
-     * @throws YandexDzenException
-     */
-    private function sendLogin($token, $processUUID)
-    {
-        $headers = [
-            'X-Requested-With' => 'XMLHttpRequest',
-        ];
-        $html = $this->post('https://passport.yandex.ru/registration-validations/auth/multi_step/start', [
-            'csrf_token' => $token,
-            'login' => $this->login,
-            'process_uuid' => $processUUID,
-            'retpath' => 'https://zen.yandex.ru/media/zen/login',
-        ], $headers);
-        $resp = json_decode($html, true);
-        if (empty($resp['status']) || $resp['status'] != 'ok') {
+        } catch (InvalidSelectorException $e) {
+            $e = new YandexDzenException('Проблема поиска полей в форме.');
+            $e->setHtml($html);
+            throw $e;
+        }
+
+        // отправим login
+        $resp = $this->sendLogin($csrfToken, $retpath, $processUUID);
+        if (empty($resp['status']) || $resp['status'] != 'ok' || empty($resp['can_authorize'])) {
             $e = new YandexDzenException('Ошибка отправки логина.');
             $e->setHtml($html);
             throw $e;
         }
-        return $resp;
-    }
 
-    /**
-     * @param $token
-     * @param $trackID
-     * @return mixed
-     * @throws GuzzleException
-     * @throws YandexDzenException
-     */
-    private function sendPassword($token, $trackID)
-    {
-        $html = $this->post('https://passport.yandex.ru/registration-validations/auth/multi_step/commit_password', [
-            'csrf_token' => $token,
-            'track_id' => $trackID,
-            'password' => $this->password,
-        ]);
-
-        $resp = json_decode($html, true);
+        // отправим password
+        $resp = $this->sendPassword($csrfToken, $retpath, $resp['track_id']);
         if (empty($resp['status']) || $resp['status'] != 'ok') {
             $e = new YandexDzenException('Ошибка отправки пароля.');
             $e->setHtml($html);
             throw $e;
         }
-        return $resp;
+    }
+
+    /**
+     * @param $csrfToken
+     * @param $processUUID
+     * @param $retpath
+     * @return array|null
+     * @throws GuzzleException
+     */
+    public function sendLogin($csrfToken, $retpath, $processUUID)
+    {
+        $headers = [
+            'X-Requested-With' => 'XMLHttpRequest',
+            'Content-Type' => 'application/x-www-form-urlencoded; charset=UTF-8',
+        ];
+        $html = $this->post('https://passport.yandex.ru/registration-validations/auth/multi_step/start',
+            [
+                'csrf_token' => $csrfToken,
+                'login' => $this->login,
+                'process_uuid' => $processUUID,
+                'retpath' => $retpath,
+                'origin' => 'zen_header_entry',
+            ], $headers
+        );
+
+        $res = json_decode($html, true);
+        return is_array($res) ? $res : null;
+    }
+
+    /**
+     * @param $csrfToken
+     * @param $retpath
+     * @param $trackId
+     * @return array|null
+     * @throws GuzzleException
+     */
+    public function sendPassword($csrfToken, $retpath, $trackId)
+    {
+        $headers = [
+            'X-Requested-With' => 'XMLHttpRequest',
+            'Content-Type' => 'application/x-www-form-urlencoded; charset=UTF-8',
+        ];
+        $html = $this->post('https://passport.yandex.ru/registration-validations/auth/multi_step/commit_password',
+            [
+                'csrf_token' => $csrfToken,
+                'password' => $this->password,
+                'track_id' => $trackId,
+                'retpath' => $retpath,
+            ], $headers
+        );
+
+        $resp = json_decode($html, true);
+        return is_array($resp) ? $resp : null;
     }
 
     /**
