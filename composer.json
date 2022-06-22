@@ -10,7 +10,7 @@
   ],
   "minimum-stability": "stable",
   "require": {
-    "guzzlehttp/guzzle": "^7.4",
+    "guzzlehttp/guzzle": "^7.4.0",
     "imangazaliev/didom": "^1.13",
     "ext-iconv": "*",
     "ext-json": "*"
