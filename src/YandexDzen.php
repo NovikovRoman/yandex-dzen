@@ -8,10 +8,11 @@ use YandexDzen\Client as YandexDzenClient;
 
 class YandexDzen
 {
-    const URL_PAGE = 'https://zen.yandex.ru/profile/editor/';
-    const URL_NEXT_PAGE = 'https://zen.yandex.ru/media-api/get-publications-by-state?state=published&publisherId={publisherId}&pageSize=200&publicationIdAfter={lastPublicationId}';
-    const URL_FIRST_PUBLICATIONS = 'https://zen.yandex.ru/media-api/get-publications-by-state?state=published&publisherId={publisherId}&pageSize=200';
-    const URL_COUNTED_PUBLICATIONS = 'https://zen.yandex.ru/media-api/count-publications-by-state?state=published&publisherId={publisherId}';
+    const URL_DZEN = 'https://dzen.ru';
+    const URL_PAGE = self::URL_DZEN . '/profile/editor/';
+    const URL_NEXT_PAGE = self::URL_DZEN . '/media-api/get-publications-by-state?state=published&publisherId={publisherId}&pageSize=200&publicationIdAfter={lastPublicationId}';
+    const URL_FIRST_PUBLICATIONS = self::URL_DZEN . '/media-api/get-publications-by-state?state=published&publisherId={publisherId}&pageSize=200';
+    const URL_COUNTED_PUBLICATIONS = self::URL_DZEN . '/media-api/count-publications-by-state?state=published&publisherId={publisherId}';
 
     private $client;
 
